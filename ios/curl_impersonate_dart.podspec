@@ -11,8 +11,9 @@ Flutter iOS plugin wrapping libcurl-impersonate.
 
   # Fetch the framework during pod install
   s.prepare_command  = <<-CMD
-    if [ ! -d "libcurl-impersonate.xcframework" ]; then
+    if [ ! -f "libcurl-impersonate.xcframework/ios-arm64/libcurl-impersonate.a" ]; then
       echo "Downloading libcurl-impersonate.xcframework..."
+      rm -rf libcurl-impersonate.xcframework
       curl -L -o framework.tar.gz https://github.com/lexiforest/curl-impersonate/releases/download/v1.5.6/libcurl-impersonate-v1.5.6.ios-xcframework.tar.gz
       tar -xzf framework.tar.gz
       rm framework.tar.gz
