@@ -1,0 +1,27 @@
+name: curl_impersonate_dart
+description: A Dart and Flutter port of curl_cffi/impers browser impersonation client. Uses libcurl-impersonate to mimic browser TLS/JA3 and HTTP/2 fingerprints.
+version: 0.1.0
+homepage: https://github.com/carter/curl_impersonate_dart
+environment:
+  sdk: '>=3.1.0 <4.0.0'
+  flutter: ">=3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  ffi: ^2.1.2
+  path: ^1.9.0
+  http: ^1.2.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  test: ^1.24.0
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        ffiPlugin: true
+      ios:
+        ffiPlugin: true

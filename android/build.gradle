@@ -1,0 +1,84 @@
+group 'com.example.curl_impersonate_dart'
+version '1.0-SNAPSHOT'
+
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+apply plugin: 'com.android.library'
+
+android {
+    namespace 'com.example.curl_impersonate_dart'
+    compileSdkVersion 34
+
+    defaultConfig {
+        minSdkVersion 21
+        externalNativeBuild {
+            cmake {
+                arguments "-DANDROID_STL=c++_shared"
+            }
+        }
+    }
+
+    packagingOptions {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path "CMakeLists.txt"
+        }
+    }
+}
+
+// Download and unpack precompiled libcurl-impersonate binaries
+task downloadBinaries {
+    doLast {
+        def version = "1.5.6"
+        def archs = [
+            'arm64-v8a': "aarch64",
+            'x86_64': "x86_64"
+        ]
+
+        archs.each { jniArch, curlArch ->
+            def targetDir = file("src/main/jniLibs/${jniArch}")
+            def targetFile = file("${targetDir}/libcurl-impersonate.so")
+
+            if (!targetFile.exists()) {
+                targetDir.mkdirs()
+                def url = "https://github.com/lexiforest/curl-impersonate/releases/download/v${version}/libcurl-impersonate-v${version}.${curlArch}-linux-android.tar.gz"
+                println "curl_impersonate_dart: Downloading libcurl-impersonate.so for ${jniArch} from ${url}..."
+
+                def archiveFile = file("${buildDir}/tmp/libcurl-${jniArch}.tar.gz")
+                archiveFile.parentFile.mkdirs()
+
+                try {
+                    new URL(url).withInputStream { i -> archiveFile.withOutputStream { it << i } }
+
+                    copy {
+                        from tarTree(resources.gzip(archiveFile))
+                        into targetDir
+                        include "**/libcurl-impersonate.so"
+                        eachFile { path = name } // Flatten
+                        includeEmptyDirs = false
+                    }
+                } catch (Exception e) {
+                    System.err.println("curl_impersonate_dart: Failed to download/extract $jniArch: ${e.message}")
+                } finally {
+                    if (archiveFile.exists()) {
+                        archiveFile.delete()
+                    }
+                }
+            }
+        }
+    }
+}
+
+project.afterEvaluate {
+    preBuild.dependsOn downloadBinaries
+}
