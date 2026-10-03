@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 
 import 'curl_consts.dart';
 import 'curl_ffi.dart';
+import 'curl_overrides.dart';
 
 class CurlResponse {
   final int statusCode;
@@ -36,6 +37,8 @@ class _CurlRequestPayload {
   final String url;
   final String method;
   final String? impersonate;
+  final bool impersonateDefaultHeaders;
+  final FingerprintOverrides? overrides;
   final Map<String, String> headers;
   final List<int>? bodyBytes;
   final List<String> initialCookies;
@@ -50,6 +53,8 @@ class _CurlRequestPayload {
     required this.url,
     required this.method,
     this.impersonate,
+    this.impersonateDefaultHeaders = true,
+    this.overrides,
     required this.headers,
     this.bodyBytes,
     required this.initialCookies,
@@ -100,7 +105,11 @@ _CurlResponseResult _executeRequestInIsolate(_CurlRequestPayload payload) {
   if (payload.impersonate != null) {
     final impersonatePtr = payload.impersonate!.toNativeUtf8();
     try {
-      final ret = lib.easyImpersonate(curl, impersonatePtr, 1);
+      final ret = lib.easyImpersonate(
+        curl,
+        impersonatePtr,
+        payload.impersonateDefaultHeaders ? 1 : 0,
+      );
       if (ret != 0) {
         lib.easyCleanup(curl);
         return (
@@ -137,6 +146,13 @@ _CurlResponseResult _executeRequestInIsolate(_CurlRequestPayload payload) {
   if (headerList.address != 0) {
     lib.setoptPtr(curl, CurlOpt.HTTPHEADER, headerList);
   }
+
+  // Apply fingerprint overrides.
+  //
+  // Deliberately placed after CURLOPT_IMPERSONATE and CURLOPT_HTTPHEADER:
+  // several overrides (header order, base headers, form boundary) are
+  // order-sensitive and would be ignored or clobbered if set earlier.
+  payload.overrides?.applyTo(lib, curl);
 
   // Set Request Body
   ffi.Pointer<ffi.Uint8> bodyPtr = ffi.Pointer.fromAddress(0);
@@ -255,6 +271,17 @@ class CurlImpersonateClient extends http.BaseClient {
   final Duration timeout;
   final bool verify;
   final String? proxy;
+
+  /// Default fingerprint overrides applied to every request. Individual
+  /// requests can layer on top via [FingerprintOverrides.merge].
+  final FingerprintOverrides overrides;
+
+  /// Whether the impersonate profile contributes its own default browser
+  /// headers. Set to `false` to take full manual control of the header set,
+  /// in which case you are responsible for supplying headers a real browser
+  /// would send.
+  final bool impersonateDefaultHeaders;
+
   List<String> _cookies = [];
 
   static String? _caBundlePath;
@@ -293,6 +320,8 @@ class CurlImpersonateClient extends http.BaseClient {
     this.timeout = const Duration(seconds: 30),
     this.verify = true,
     this.proxy,
+    this.overrides = const FingerprintOverrides.none(),
+    this.impersonateDefaultHeaders = true,
   }) {
     try {
       // Force init to check if platform supports dynamic FFI loading
@@ -359,6 +388,8 @@ class CurlImpersonateClient extends http.BaseClient {
       url: request.url.toString(),
       method: request.method,
       impersonate: profile,
+      impersonateDefaultHeaders: impersonateDefaultHeaders,
+      overrides: overrides,
       headers: request.headers,
       bodyBytes: streamBytes,
       initialCookies: _cookies,
@@ -404,6 +435,7 @@ class CurlImpersonateClient extends http.BaseClient {
     int maxRedirects = 5,
     bool? verify,
     String? proxy,
+    FingerprintOverrides? requestOverrides,
   }) async {
     if (_useFallback) {
       final uri = Uri.parse(url);
@@ -467,6 +499,8 @@ class CurlImpersonateClient extends http.BaseClient {
       url: url,
       method: method,
       impersonate: profile,
+      impersonateDefaultHeaders: impersonateDefaultHeaders,
+      overrides: overrides.merge(requestOverrides),
       headers: finalHeaders,
       bodyBytes: finalBodyBytes,
       initialCookies: _cookies,

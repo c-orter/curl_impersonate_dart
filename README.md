@@ -215,6 +215,40 @@ Notes carried over from upstream:
 * The `-a` suffix (`chrome133a`) marks an alternative fingerprint observed in the
   wild via A/B testing, not an official browser release.
 
+### Fingerprint Tuning
+
+Each impersonate profile sets roughly forty TLS and HTTP/2 attributes in one call.
+Since libcurl-impersonate v2.0.0 they are individually overridable, so you can
+change just the ones you need:
+
+```dart
+final client = CurlImpersonateClient(
+  defaultImpersonate: BrowserProfile.chrome150,
+  overrides: const FingerprintOverrides(
+    grease: false,
+    certCompression: 'brotli',
+    http2PseudoHeadersOrder: 'masp',
+  ),
+);
+
+// Layer a per-request patch over the client defaults (non-destructive).
+await client.request(
+  url: 'https://example.com',
+  method: 'GET',
+  requestOverrides: const FingerprintOverrides(splitCookies: true),
+);
+```
+
+Overrides are applied *after* the impersonate profile and after your headers, so
+they win over both. `null` means "keep the profile default".
+
+> A fingerprint is scored as a *whole*. Overriding one attribute to a value no
+> real browser emits tends to make detection easier, not harder — change only
+> what you have evidence about.
+
+See **[docs/fingerprint-tuning.md](docs/fingerprint-tuning.md)** for a full
+per-option breakdown and worked scraping scenarios.
+
 ### Introspecting the Bundled Library
 
 ```dart

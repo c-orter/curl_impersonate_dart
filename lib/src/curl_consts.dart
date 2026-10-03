@@ -67,6 +67,11 @@ class CurlOpt {
   static const int TLS_KEY_SHARES_LIMIT = 1019; // long
   static const int TLS_USE_NEW_ALPS_CODEPOINT = 1020; // long
   static const int HTTP2_NO_PRIORITY = 1021; // long
+  static const int STREAM_EXCLUSIVE = 1013; // long
+  static const int PROXY_CREDENTIAL_NO_REUSE = 1022; // long
+  static const int SPLIT_COOKIES = 1023; // long
+  static const int FORM_BOUNDARY = 11024; // stringpoint
+  static const int HTTPHEADER_ORDER = 11030; // stringpoint
   static const int HTTP3_PSEUDO_HEADERS_ORDER = 11025; // stringpoint
   static const int HTTP3_SETTINGS = 11026; // stringpoint
   static const int QUIC_TRANSPORT_PARAMETERS = 11027; // stringpoint

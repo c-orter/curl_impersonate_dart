@@ -160,6 +160,81 @@ void main() {
     });
   });
 
+  group('FingerprintOverrides', () {
+    test('wire formatters produce the upstream id:value;id:value format', () {
+      expect(
+        FingerprintOverrides.formatSettings({1: 65536, 2: 0, 3: 100}),
+        equals('1:65536;2:0;3:100'),
+      );
+      expect(
+        FingerprintOverrides.formatTransportParameters({0x1: 'x', 0x6: 'y'}),
+        equals('1:x;6:y'),
+      );
+      expect(FingerprintOverrides.formatSettings({}), equals(''));
+    });
+
+    test('unset fields stay null so the profile default survives', () {
+      const o = FingerprintOverrides();
+      expect(o.grease, isNull);
+      expect(o.http2Settings, isNull);
+      expect(o.baseHeaders, isNull);
+    });
+
+    test('merge layers non-null fields and leaves the rest alone', () {
+      const base = FingerprintOverrides(
+        grease: false,
+        certCompression: 'brotli',
+        http2WindowUpdate: 100,
+      );
+      const patch = FingerprintOverrides(
+        grease: true,
+        http2WindowUpdate: 65535,
+      );
+
+      final merged = base.merge(patch);
+
+      // Overridden by the patch.
+      expect(merged.grease, isTrue);
+      expect(merged.http2WindowUpdate, equals(65535));
+      // Inherited from the base.
+      expect(merged.certCompression, equals('brotli'));
+      // Still untouched.
+      expect(merged.http2Settings, isNull);
+
+      // Base must not have been mutated.
+      expect(base.grease, isFalse);
+      expect(base.http2WindowUpdate, equals(100));
+    });
+
+    test('merging null is a no-op', () {
+      const base = FingerprintOverrides(grease: false);
+      expect(identical(base.merge(null), base), isTrue);
+    });
+
+    test('keyUsageCheck is the natural inverse of the upstream option', () {
+      // TLS_KEY_USAGE_NO_CHECK is the upstream spelling; the Dart field reads
+      // the way a caller thinks about it.
+      final on = FingerprintOverrides(keyUsageCheck: true).merge(null);
+      final off = FingerprintOverrides(keyUsageCheck: false).merge(null);
+      expect(on.keyUsageCheck, isTrue);
+      expect(off.keyUsageCheck, isFalse);
+    });
+
+    test('client retains overrides and can layer per-request ones', () {
+      final client = CurlImpersonateClient(
+        overrides: const FingerprintOverrides(grease: false),
+      );
+      expect(client.overrides.grease, isFalse);
+
+      final layered = client.overrides.merge(
+        const FingerprintOverrides(certCompression: 'zlib'),
+      );
+      expect(layered.certCompression, equals('zlib'));
+      expect(layered.grease, isFalse);
+      client.close();
+    });
+  });
+
   group('CurlImpersonateClient Request Tests', () {
     late CurlImpersonateClient client;
 
