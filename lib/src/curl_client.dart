@@ -89,13 +89,30 @@ _CurlResponseResult _executeRequestInIsolate(_CurlRequestPayload payload) {
   // Set target URL
   lib.setoptString(curl, CurlOpt.URL, payload.url);
 
-  // Apply browser profile impersonation
+  // Apply browser profile impersonation.
+  //
+  // This must be treated as fatal on failure. curl_easy_impersonate() returns
+  // non-zero for an unknown or unsupported target, but leaves the handle usable
+  // and *un-impersonated*. Proceeding anyway would send a request with a plain
+  // curl TLS/HTTP2 fingerprint, which is exactly the thing this package exists
+  // to avoid -- and it would fail silently at the anti-bot provider, far from
+  // the actual cause.
   if (payload.impersonate != null) {
     final impersonatePtr = payload.impersonate!.toNativeUtf8();
     try {
       final ret = lib.easyImpersonate(curl, impersonatePtr, 1);
       if (ret != 0) {
-        // Log/warn about profile setting failure, but proceed
+        lib.easyCleanup(curl);
+        return (
+          statusCode: 0,
+          headers: <String, String>{},
+          bodyBytes: <int>[],
+          cookies: <String>[],
+          effectiveUrl: payload.url,
+          error: 'Failed to impersonate profile "${payload.impersonate}" '
+              '(curl_easy_impersonate returned $ret). The bundled '
+              'libcurl-impersonate does not recognise this target.',
+        );
       }
     } finally {
       malloc.free(impersonatePtr);
@@ -288,6 +305,33 @@ class CurlImpersonateClient extends http.BaseClient {
 
   bool get isNative => !_useFallback;
 
+  /// Version string of the bundled native libcurl-impersonate, e.g.
+  /// `8.22.0-IMPERSONATE`. Returns `null` when running on the desktop fallback.
+  String? get curlVersion {
+    if (_useFallback) return null;
+    try {
+      return LibCurl.instance.versionString;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Throws [ArgumentError] if [profile] is not a target the pinned
+  /// libcurl-impersonate release knows about.
+  ///
+  /// Catching this on the client side turns what would otherwise be a native
+  /// error deep inside a worker isolate into an immediate, actionable message.
+  static void validateProfile(String profile) {
+    if (!BrowserProfile.values.contains(profile)) {
+      throw ArgumentError.value(
+        profile,
+        'profile',
+        'Unknown impersonation target. Known targets: '
+            '${BrowserProfile.values.join(', ')}',
+      );
+    }
+  }
+
   List<String> get cookies => _cookies;
   set cookies(List<String> val) => _cookies = val;
 
@@ -307,11 +351,14 @@ class CurlImpersonateClient extends http.BaseClient {
 
     await _initCaBundle();
     final streamBytes = await request.finalize().toBytes();
-    
+
+    final profile = defaultImpersonate;
+    if (profile != null) validateProfile(profile);
+
     final payload = _CurlRequestPayload(
       url: request.url.toString(),
       method: request.method,
-      impersonate: defaultImpersonate,
+      impersonate: profile,
       headers: request.headers,
       bodyBytes: streamBytes,
       initialCookies: _cookies,
@@ -402,6 +449,9 @@ class CurlImpersonateClient extends http.BaseClient {
     final finalHeaders = headers != null ? Map<String, String>.from(headers) : <String, String>{};
     List<int>? finalBodyBytes = bodyBytes;
 
+    final profile = impersonate ?? defaultImpersonate;
+    if (profile != null) validateProfile(profile);
+
     if (bodyFields != null) {
       final parts = <String>[];
       bodyFields.forEach((key, val) {
@@ -416,7 +466,7 @@ class CurlImpersonateClient extends http.BaseClient {
     final payload = _CurlRequestPayload(
       url: url,
       method: method,
-      impersonate: impersonate ?? defaultImpersonate,
+      impersonate: profile,
       headers: finalHeaders,
       bodyBytes: finalBodyBytes,
       initialCookies: _cookies,

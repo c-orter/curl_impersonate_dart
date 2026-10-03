@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'dart:convert';
 import 'package:test/test.dart';
-import 'package:ffi/ffi.dart';
 import 'package:curl_impersonate_dart/curl_impersonate_dart.dart';
 import 'package:curl_impersonate_dart/src/curl_ffi.dart';
 
@@ -93,10 +92,71 @@ void main() {
         print('Skipping native FFI test on unsupported platform: ${Platform.operatingSystem}');
         return;
       }
-      final version = LibCurl.instance.version().toDartString();
+      final version = LibCurl.instance.versionString;
       print('Underlying LibCurl Version: $version');
       expect(version, isNotEmpty);
       expect(version.toLowerCase(), contains('impersonate'));
+    });
+  });
+
+  // These assert against the pinned libcurl-impersonate release's headers and
+  // therefore run on every platform, including the desktop fallback.
+  group('Upstream constant & profile parity', () {
+    test('option and info codes match upstream header values', () {
+      // Numeric values are compiled into upstream curl.h as `type + num`.
+      // A silent shift here would misdirect every setopt call at runtime.
+      expect(CurlOpt.URL, equals(10002));
+      expect(CurlOpt.WRITEFUNCTION, equals(20011));
+      expect(CurlOpt.HEADERFUNCTION, equals(20079));
+      expect(CurlOpt.POSTFIELDS, equals(10015));
+      expect(CurlOpt.ACCEPT_ENCODING, equals(10102));
+      expect(CurlOpt.COOKIELIST, equals(10135));
+      expect(CurlOpt.PROXY_CAINFO, equals(10246));
+
+      expect(CurlInfo.EFFECTIVE_URL, equals(0x100000 + 1));
+      expect(CurlInfo.RESPONSE_CODE, equals(0x200000 + 2));
+      expect(CurlInfo.COOKIELIST, equals(0x400000 + 28));
+
+      // New in libcurl-impersonate v2.x.
+      expect(CurlOpt.IMPERSONATE, equals(10999));
+      expect(CurlInfo.REDIRECT_HISTORY, equals(0x400000 + 1001));
+      expect(CurlOpt.TLS_TRUST_ANCHORS, equals(11040));
+      expect(CurlOpt.QUIC_INITIAL_PACKET_NUMBER, equals(1041));
+    });
+
+    test('profile list covers the pinned upstream release', () {
+      // chrome150 arrived in v2.1.0; chrome133a/tor145 were never exposed.
+      expect(BrowserProfile.chrome150, equals('chrome150'));
+      expect(BrowserProfile.chrome, equals('chrome150'));
+      expect(BrowserProfile.chrome133a, equals('chrome133a'));
+      expect(BrowserProfile.tor145, equals('tor145'));
+
+      expect(BrowserProfile.values, contains(BrowserProfile.chrome150));
+      expect(BrowserProfile.values, contains(BrowserProfile.chrome99Android));
+      expect(BrowserProfile.values, contains(BrowserProfile.safari260Ios));
+      // Every entry must be a distinct, non-empty target name.
+      expect(BrowserProfile.values.toSet().length, equals(BrowserProfile.values.length));
+      expect(BrowserProfile.values.any((p) => p.isEmpty), isFalse);
+    });
+
+    test('HTTP/3 capability list matches upstream H3 fingerprints', () {
+      expect(BrowserProfile.supportsHttp3(BrowserProfile.chrome150), isTrue);
+      expect(BrowserProfile.supportsHttp3(BrowserProfile.firefox147), isTrue);
+      expect(BrowserProfile.supportsHttp3(BrowserProfile.chrome142), isFalse);
+      expect(BrowserProfile.supportsHttp3(BrowserProfile.safari), isFalse);
+    });
+
+    test('validateProfile rejects unknown targets and accepts known ones', () {
+      expect(() => CurlImpersonateClient.validateProfile('chrome150'), returnsNormally);
+      expect(
+        () => CurlImpersonateClient.validateProfile('chrome999'),
+        throwsA(isA<ArgumentError>()),
+      );
+      // A malformed profile must not reach the native layer silently.
+      expect(
+        () => CurlImpersonateClient.validateProfile(''),
+        throwsA(isA<ArgumentError>()),
+      );
     });
   });
 

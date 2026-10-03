@@ -37,6 +37,17 @@ class LibCurl {
     return _instance!;
   }
 
+  /// Version of the loaded native library, e.g. `8.22.0-IMPERSONATE`.
+  String get versionString {
+    try {
+      final ptr = version();
+      if (ptr.address == 0) return 'unknown';
+      return ptr.toDartString();
+    } catch (_) {
+      return 'unknown';
+    }
+  }
+
   LibCurl._load() {
     dyLib = _loadLibrary();
     _initBindings();

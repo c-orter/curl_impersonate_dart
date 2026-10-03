@@ -6,9 +6,45 @@ This library helps you bypass bot detection systems (such as Cloudflare, Akamai,
 
 ## Target Platform Support
 
-* **Android:** Full Impersonation FFI (downloads and bundles `.so` binaries automatically).
-* **iOS:** Full Impersonation FFI (downloads and bundles `.xcframework` automatically via CocoaPods).
+* **Android:** Full Impersonation FFI (downloads and bundles `.so` binaries automatically). Requires API 21+.
+* **iOS:** Full Impersonation FFI (downloads and bundles `.xcframework` automatically via CocoaPods). Requires iOS 13+.
 * **Desktop Development Fallback:** Automatically falls back to standard HTTP clients (`package:http`) on macOS, Windows, and Linux to allow testing and development without app crashes.
+
+---
+
+## Upstream
+
+This package bundles **libcurl-impersonate v2.2.3**, which is based on **curl 8.22.0**.
+
+The version is pinned in exactly two places, which must be kept in sync when upgrading:
+
+* `android/build.gradle` → `ext.curlImpersonateVersion`
+* `ios/curl_impersonate_dart.podspec` → the `prepare_command` download URL
+
+### Upgrading
+
+1. Bump the version in both files above.
+2. Delete any previously downloaded binaries (the Gradle task keeps a
+   `.curl-impersonate-version` stamp per ABI and will re-download automatically,
+   but `android/build` and `ios/Pods` may hold stale artifacts):
+   ```bash
+   rm -rf android/src/main/jniLibs android/build ios/Pods
+   ```
+
+### Notable upstream changes since v1.5.6
+
+* curl updated to **8.22.0**.
+* **`chrome150`** target added. `BrowserProfile.chrome` now points at it.
+* `CURLOPT_IMPERSONATE` and 33 further fingerprint-tuning options are exposed
+  through `CurlOpt` — override individual TLS/HTTP2/HTTP3 attributes instead of
+  taking whatever the profile ships with.
+* `CURLINFO_REDIRECT_HISTORY` (`CurlInfo.REDIRECT_HISTORY`) exposes the headers of
+  each redirect response followed.
+* HTTP/3 and QUIC fingerprints are available. Only `chrome145`, `chrome146`,
+  `chrome150` and `firefox147` carry them — see `BrowserProfile.supportsHttp3`.
+
+The `curl_easy_impersonate` C signature and all existing `CURLOPT`/`CURLINFO`
+numeric values are unchanged from v1.5.6, so existing code keeps working.
 
 ---
 
@@ -155,14 +191,41 @@ final client = CurlImpersonateClient(
 
 ### Supported Impersonation Profiles
 
-Available profiles defined in `BrowserProfile`:
+`BrowserProfile` exposes every target the pinned release supports. Prefer the
+`BrowserProfile.values` list or `validateProfile()` over hand-written strings —
+an unknown target is rejected before it can reach the native layer.
 
-* `BrowserProfile.chrome` (Chrome Desktop)
-* `BrowserProfile.chromeAndroid` (Chrome Android)
-* `BrowserProfile.firefox` (Firefox Desktop)
-* `BrowserProfile.safari` (Safari Desktop)
-* `BrowserProfile.safariIos` (Safari iOS)
-* `BrowserProfile.edge` (Edge Desktop)
+* **Chrome Desktop:** `chrome99`, `chrome100`, `chrome101`, `chrome104`,
+  `chrome107`, `chrome110`, `chrome116`, `chrome119`, `chrome120`, `chrome123`,
+  `chrome124`, `chrome131`, `chrome133a`, `chrome136`, `chrome142`, `chrome145`,
+  `chrome146`, `chrome150`
+* **Chrome Mobile:** `chrome99_android`, `chrome131_android`
+* **Edge:** `edge99`, `edge101`
+* **Firefox:** `firefox133`, `firefox135`, `firefox144`, `firefox147`
+* **Safari Desktop:** `safari153`, `safari155`, `safari170`, `safari180`,
+  `safari184`, `safari260`, `safari2601`
+* **Safari iOS:** `safari172_ios`, `safari180_ios`, `safari184_ios`, `safari260_ios`
+* **Tor:** `tor145`
+
+Notes carried over from upstream:
+
+* Chromium-based browsers share one fingerprint apart from `User-Agent` and
+  `sec-ch-ua-platform`, so impersonating `edge*` or `chrome*_android` usually
+  needs your own headers.
+* The `-a` suffix (`chrome133a`) marks an alternative fingerprint observed in the
+  wild via A/B testing, not an official browser release.
+
+### Introspecting the Bundled Library
+
+```dart
+final client = CurlImpersonateClient();
+print(client.curlVersion);          // e.g. 8.22.0-IMPERSONATE, null on desktop
+print(BrowserProfile.supportsHttp3(BrowserProfile.chrome150)); // true
+
+// Fails fast with a readable message instead of silently requesting unimpersonated.
+CurlImpersonateClient.validateProfile('chrome999'); // throws ArgumentError
+client.close();
+```
 
 ---
 

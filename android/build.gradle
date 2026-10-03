@@ -36,10 +36,14 @@ android {
     }
 }
 
+// Upstream libcurl-impersonate release to bind against.
+// Must be kept in sync with the version pinned in ios/curl_impersonate_dart.podspec.
+ext.curlImpersonateVersion = "2.2.3"
+
 // Download and unpack precompiled libcurl-impersonate binaries
 task downloadBinaries {
     doLast {
-        def version = "1.5.6"
+        def version = project.ext.curlImpersonateVersion
         def archs = [
             'arm64-v8a': "aarch64",
             'x86_64': "x86_64"
@@ -48,11 +52,18 @@ task downloadBinaries {
         archs.each { jniArch, curlArch ->
             def targetDir = file("src/main/jniLibs/${jniArch}")
             def targetFile = file("${targetDir}/libcurl-impersonate.so")
+            // Cache stamp: the presence of the .so alone is not a sufficient guard,
+            // otherwise bumping `version` would silently keep the previous release's
+            // binary in an already-populated tree.
+            def stampFile = file("${targetDir}/.curl-impersonate-version")
 
-            if (!targetFile.exists()) {
+            def cachedVersion = stampFile.exists() ? stampFile.text.trim() : null
+            def isFresh = targetFile.exists() && cachedVersion == version
+
+            if (!isFresh) {
                 targetDir.mkdirs()
                 def url = "https://github.com/lexiforest/curl-impersonate/releases/download/v${version}/libcurl-impersonate-v${version}.${curlArch}-linux-android.tar.gz"
-                println "curl_impersonate_dart: Downloading libcurl-impersonate.so for ${jniArch} from ${url}..."
+                println "curl_impersonate_dart: Downloading libcurl-impersonate.so v${version} for ${jniArch} from ${url}..."
 
                 def archiveFile = file("${buildDir}/tmp/libcurl-${jniArch}.tar.gz")
                 archiveFile.parentFile.mkdirs()
@@ -60,20 +71,47 @@ task downloadBinaries {
                 try {
                     new URL(url).withInputStream { i -> archiveFile.withOutputStream { it << i } }
 
+                    // Extract into a scratch dir first so a failed download cannot
+                    // leave a half-written .so behind for the next build to trust.
+                    def stagingDir = file("${buildDir}/tmp/extract-${jniArch}")
+                    if (stagingDir.exists()) stagingDir.deleteDir()
+                    stagingDir.mkdirs()
+
                     copy {
                         from tarTree(resources.gzip(archiveFile))
-                        into targetDir
+                        into stagingDir
                         include "**/libcurl-impersonate.so"
                         eachFile { path = name } // Flatten
                         includeEmptyDirs = false
                     }
+
+                    def staged = file("${stagingDir}/libcurl-impersonate.so")
+                    if (!staged.exists()) {
+                        throw new GradleException("archive did not contain libcurl-impersonate.so")
+                    }
+
+                    copy {
+                        from staged
+                        into targetDir
+                    }
+                    stagingDir.deleteDir()
+                    stampFile.text = version
                 } catch (Exception e) {
-                    System.err.println("curl_impersonate_dart: Failed to download/extract $jniArch: ${e.message}")
+                    throw new GradleException(
+                        "curl_impersonate_dart: failed to fetch libcurl-impersonate " +
+                        "v${version} for ${jniArch} from ${url}.\n" +
+                        "  ${e.class.simpleName}: ${e.message}\n" +
+                        "  The build cannot continue: without the native library every " +
+                        "request would silently fall back to an unimpersonated client.",
+                        e
+                    )
                 } finally {
                     if (archiveFile.exists()) {
                         archiveFile.delete()
                     }
                 }
+            } else {
+                println "curl_impersonate_dart: libcurl-impersonate v${version} for ${jniArch} already present, skipping download."
             }
         }
     }

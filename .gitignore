@@ -92,6 +92,8 @@ unlinked_spec.ds
 *.jks
 local.properties
 **/.cxx/
+# Version stamp for the downloaded libcurl-impersonate binaries
+**/android/**/.curl-impersonate-version
 
 # iOS/XCode related
 **/ios/**/*.a
