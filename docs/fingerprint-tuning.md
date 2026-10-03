@@ -1,6 +1,6 @@
 # Fingerprint tuning
 
-`curl_impersonate_dart` bundles **libcurl-impersonate v2.2.3**. A profile such as
+`curl_impersonate_dart` bundles **libcurl-impersonate v2.2.2**. A profile such as
 `BrowserProfile.chrome150` sets roughly forty TLS and HTTP/2 attributes in one
 call. Since v2.0.0 those attributes are individually addressable, so you can
 override just the ones you need.

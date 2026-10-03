@@ -38,7 +38,25 @@ android {
 
 // Upstream libcurl-impersonate release to bind against.
 // Must be kept in sync with the version pinned in ios/curl_impersonate_dart.podspec.
-ext.curlImpersonateVersion = "2.2.3"
+//
+// 2.2.2, NOT the latest 2.2.3: 2.2.3 switched curl from the threaded resolver
+// to c-ares. c-ares discovers nameservers from /etc/resolv.conf (absent on
+// Android) then from the net.dns1/net.dns2 system properties, which untrusted
+// apps cannot read on modern Android. It ends up with no servers at all and
+// every request fails with CURLE_COULDNT_RESOLVE_HOST (curl error 6) before a
+// packet is sent -- logged as:
+//     W/libc: Access denied finding property "net.dns1"
+// 2.2.2 still uses the threaded resolver (Curl_getaddrinfo_ex), which calls the
+// platform getaddrinfo() and resolves via netd. Verified: 0 `ares_*` symbols in
+// the aarch64-android 2.2.2 binary; present in 2.2.3. Same curl_easy_impersonate
+// signature, same tuning-option symbol set, all 38 profiles including
+// chrome146/chrome150/chrome131_android.
+//
+// Raise this once upstream fixes Android name resolution. Do not bump on
+// release-announcement alone -- check for `ares_getaddrinfo` in the tarball:
+//   tar xzf libcurl-impersonate-<v>.<arch>-linux-android.tar.gz \
+//     && strings libcurl-impersonate.so | grep -c ares_getaddrinfo   # want 0
+ext.curlImpersonateVersion = "2.2.2"
 
 // Download and unpack precompiled libcurl-impersonate binaries
 task downloadBinaries {

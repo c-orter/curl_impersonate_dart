@@ -14,7 +14,16 @@ This library helps you bypass bot detection systems (such as Cloudflare, Akamai,
 
 ## Upstream
 
-This package bundles **libcurl-impersonate v2.2.3**, which is based on **curl 8.22.0**.
+This package bundles **libcurl-impersonate v2.2.2**, which is based on **curl 8.21.0**.
+
+> **Pinned one release behind on purpose.** The latest release, v2.2.3, links
+> c-ares instead of curl's threaded resolver. On Android, c-ares cannot find
+> nameservers: `/etc/resolv.conf` does not exist and the `net.dns1`/`net.dns2`
+> system properties are not readable by untrusted apps, so every request fails
+> with curl error 6 (`CURLE_COULDNT_RESOLVE_HOST`) before any packet is sent.
+> v2.2.2 uses the threaded resolver, which calls the platform `getaddrinfo()`
+> and resolves via netd. Bump once upstream fixes this — see the comment on
+> `ext.curlImpersonateVersion` in `android/build.gradle` for how to verify.
 
 The version is pinned in exactly two places, which must be kept in sync when upgrading:
 
@@ -33,7 +42,7 @@ The version is pinned in exactly two places, which must be kept in sync when upg
 
 ### Notable upstream changes since v1.5.6
 
-* curl updated to **8.22.0**.
+* curl updated to **8.21.0**.
 * **`chrome150`** target added. `BrowserProfile.chrome` now points at it.
 * `CURLOPT_IMPERSONATE` and 33 further fingerprint-tuning options are exposed
   through `CurlOpt` — override individual TLS/HTTP2/HTTP3 attributes instead of
@@ -253,7 +262,7 @@ per-option breakdown and worked scraping scenarios.
 
 ```dart
 final client = CurlImpersonateClient();
-print(client.curlVersion);          // e.g. 8.22.0-IMPERSONATE, null on desktop
+print(client.curlVersion);          // e.g. 8.21.0-IMPERSONATE, null on desktop
 print(BrowserProfile.supportsHttp3(BrowserProfile.chrome150)); // true
 
 // Fails fast with a readable message instead of silently requesting unimpersonated.
