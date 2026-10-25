@@ -14,16 +14,14 @@ This library helps you bypass bot detection systems (such as Cloudflare, Akamai,
 
 ## Upstream
 
-This package bundles **libcurl-impersonate v2.2.2**, which is based on **curl 8.21.0**.
+This package bundles **libcurl-impersonate v2.3.1**, which is based on **curl 8.23.0**.
 
-> **Pinned one release behind on purpose.** The latest release, v2.2.3, links
-> c-ares instead of curl's threaded resolver. On Android, c-ares cannot find
-> nameservers: `/etc/resolv.conf` does not exist and the `net.dns1`/`net.dns2`
-> system properties are not readable by untrusted apps, so every request fails
-> with curl error 6 (`CURLE_COULDNT_RESOLVE_HOST`) before any packet is sent.
-> v2.2.2 uses the threaded resolver, which calls the platform `getaddrinfo()`
-> and resolves via netd. Bump once upstream fixes this — see the comment on
-> `ext.curlImpersonateVersion` in `android/build.gradle` for how to verify.
+v2.3.1 is a security release (Brotli 1.2.1, which fixes the "http2shell" bug, and
+revoked-certificate awareness on Windows); updating from earlier releases is
+strongly advised. Android is built with curl's threaded resolver again (as of
+v2.3.0), so the DNS failure that kept this package on v2.2.2 is gone. Before
+bumping, still check for `ares_getaddrinfo` in the Android tarball — see the
+comment on `ext.curlImpersonateVersion` in `android/build.gradle`.
 
 The version is pinned in exactly two places, which must be kept in sync when upgrading:
 
@@ -42,15 +40,21 @@ The version is pinned in exactly two places, which must be kept in sync when upg
 
 ### Notable upstream changes since v1.5.6
 
-* curl updated to **8.21.0**.
-* **`chrome150`** target added. `BrowserProfile.chrome` now points at it.
+* curl updated to **8.23.0**.
+* **`chrome150`** through **`chrome152`** (plus `chrome151_macos`/`chrome152_macos`),
+  **`safari270`**, **`safari270_ios`** and **`firefox153`**–**`firefox155`** targets
+  added. `BrowserProfile.chrome` now points at `chrome152`, `safari` at `safari270`,
+  `safariIos` at `safari270_ios` and `firefox` at `firefox155`.
+* Android binaries for `armeabi-v7a` and `x86` are bundled in addition to
+  `arm64-v8a` and `x86_64`.
 * `CURLOPT_IMPERSONATE` and 33 further fingerprint-tuning options are exposed
   through `CurlOpt` — override individual TLS/HTTP2/HTTP3 attributes instead of
   taking whatever the profile ships with.
 * `CURLINFO_REDIRECT_HISTORY` (`CurlInfo.REDIRECT_HISTORY`) exposes the headers of
   each redirect response followed.
 * HTTP/3 and QUIC fingerprints are available. Only `chrome145`, `chrome146`,
-  `chrome150` and `firefox147` carry them — see `BrowserProfile.supportsHttp3`.
+  `chrome150`–`chrome152` (incl. `_macos`), `safari270`,
+  `safari270_ios` and `firefox147` carry them — see `BrowserProfile.supportsHttp3`.
 
 The `curl_easy_impersonate` C signature and all existing `CURLOPT`/`CURLINFO`
 numeric values are unchanged from v1.5.6, so existing code keeps working.
@@ -81,7 +85,7 @@ dependencies:
 ### Native Setup
 
 #### Android
-No additional setup is required. The library automatically fetches the appropriate `libcurl-impersonate.so` binaries for `arm64-v8a` and `x86_64` during your Gradle build and packages them within the final APK.
+No additional setup is required. The library automatically fetches the appropriate `libcurl-impersonate.so` binaries for `arm64-v8a`, `armeabi-v7a`, `x86_64` and `x86` during your Gradle build and packages them within the final APK.
 
 #### iOS
 Run `pod install` in your Flutter project's `ios` directory:
@@ -207,13 +211,14 @@ an unknown target is rejected before it can reach the native layer.
 * **Chrome Desktop:** `chrome99`, `chrome100`, `chrome101`, `chrome104`,
   `chrome107`, `chrome110`, `chrome116`, `chrome119`, `chrome120`, `chrome123`,
   `chrome124`, `chrome131`, `chrome133a`, `chrome136`, `chrome142`, `chrome145`,
-  `chrome146`, `chrome150`
+  `chrome146`, `chrome150`, `chrome151`, `chrome151_macos`, `chrome152`,
+  `chrome152_macos`
 * **Chrome Mobile:** `chrome99_android`, `chrome131_android`
 * **Edge:** `edge99`, `edge101`
-* **Firefox:** `firefox133`, `firefox135`, `firefox144`, `firefox147`
+* **Firefox:** `firefox133`, `firefox135`, `firefox144`, `firefox147`, `firefox153`, `firefox154`, `firefox155`
 * **Safari Desktop:** `safari153`, `safari155`, `safari170`, `safari180`,
-  `safari184`, `safari260`, `safari2601`
-* **Safari iOS:** `safari172_ios`, `safari180_ios`, `safari184_ios`, `safari260_ios`
+  `safari184`, `safari260`, `safari2601`, `safari270`
+* **Safari iOS:** `safari172_ios`, `safari180_ios`, `safari184_ios`, `safari260_ios`, `safari270_ios`
 * **Tor:** `tor145`
 
 Notes carried over from upstream:
@@ -262,7 +267,7 @@ per-option breakdown and worked scraping scenarios.
 
 ```dart
 final client = CurlImpersonateClient();
-print(client.curlVersion);          // e.g. 8.21.0-IMPERSONATE, null on desktop
+print(client.curlVersion);          // e.g. 8.23.0-IMPERSONATE, null on desktop
 print(BrowserProfile.supportsHttp3(BrowserProfile.chrome150)); // true
 
 // Fails fast with a readable message instead of silently requesting unimpersonated.

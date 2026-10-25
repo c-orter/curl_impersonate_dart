@@ -127,7 +127,17 @@ void main() {
     test('profile list covers the pinned upstream release', () {
       // chrome150 arrived in v2.1.0; chrome133a/tor145 were never exposed.
       expect(BrowserProfile.chrome150, equals('chrome150'));
-      expect(BrowserProfile.chrome, equals('chrome150'));
+      expect(BrowserProfile.chrome, equals('chrome152'));
+      expect(BrowserProfile.safari, equals('safari270'));
+      expect(BrowserProfile.safariIos, equals('safari270_ios'));
+      expect(BrowserProfile.firefox, equals('firefox155'));
+      // New in v2.3.0.
+      for (final p in [
+        'chrome151', 'chrome151_macos', 'chrome152', 'chrome152_macos',
+        'firefox153', 'firefox154', 'firefox155', 'safari270', 'safari270_ios',
+      ]) {
+        expect(BrowserProfile.values, contains(p));
+      }
       expect(BrowserProfile.chrome133a, equals('chrome133a'));
       expect(BrowserProfile.tor145, equals('tor145'));
 
@@ -143,7 +153,10 @@ void main() {
       expect(BrowserProfile.supportsHttp3(BrowserProfile.chrome150), isTrue);
       expect(BrowserProfile.supportsHttp3(BrowserProfile.firefox147), isTrue);
       expect(BrowserProfile.supportsHttp3(BrowserProfile.chrome142), isFalse);
-      expect(BrowserProfile.supportsHttp3(BrowserProfile.safari), isFalse);
+      expect(BrowserProfile.supportsHttp3(BrowserProfile.chrome152Macos), isTrue);
+      expect(BrowserProfile.supportsHttp3(BrowserProfile.safari270Ios), isTrue);
+      expect(BrowserProfile.supportsHttp3(BrowserProfile.safari2601), isFalse);
+      expect(BrowserProfile.supportsHttp3(BrowserProfile.firefox155), isFalse);
     });
 
     test('validateProfile rejects unknown targets and accepts known ones', () {

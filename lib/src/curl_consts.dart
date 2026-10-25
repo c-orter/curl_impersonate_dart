@@ -122,15 +122,22 @@ class CurlVersion {
 ///  * The `-a` suffix (e.g. `chrome133a`) marks an alternative fingerprint
 ///    observed in the wild via A/B testing, not an official browser release.
 ///
-/// Only [chrome145], [chrome146], [chrome150] and [firefox147] carry HTTP/3 and
-/// QUIC fingerprints; see [http3Capable].
+/// Only [chrome145], [chrome146], [chrome150], [chrome151], [chrome152] (and
+/// their `_macos` variants), [safari270], [safari270Ios] and [firefox147] carry
+/// HTTP/3 and QUIC fingerprints; see [http3Capable].
 class BrowserProfile {
   /// Profiles that carry a matching HTTP/3 (QUIC) fingerprint upstream.
   static const Set<String> http3Capable = {
     'chrome145',
     'chrome146',
     'chrome150',
+    'chrome151',
+    'chrome151_macos',
+    'chrome152',
+    'chrome152_macos',
     'firefox147',
+    'safari270',
+    'safari270_ios',
   };
 
   static bool supportsHttp3(String profile) => http3Capable.contains(profile);
@@ -162,11 +169,15 @@ class BrowserProfile {
   static const String chrome145 = 'chrome145';
   static const String chrome146 = 'chrome146';
 
-  /// New in libcurl-impersonate v2.1.0. BoringSSL is pinned to the Chrome 150
-  /// profile upstream, so this is the most current Chrome fingerprint available.
   static const String chrome150 = 'chrome150';
 
-  static const String chrome = 'chrome150'; // Default Chrome alias
+  /// New in libcurl-impersonate v2.3.0 (Windows 10 and macOS 26.0 variants).
+  static const String chrome151 = 'chrome151';
+  static const String chrome151Macos = 'chrome151_macos';
+  static const String chrome152 = 'chrome152';
+  static const String chrome152Macos = 'chrome152_macos';
+
+  static const String chrome = 'chrome152'; // Default Chrome alias
 
   // Chrome Mobile
   static const String chrome99Android = 'chrome99_android';
@@ -178,7 +189,12 @@ class BrowserProfile {
   static const String firefox135 = 'firefox135';
   static const String firefox144 = 'firefox144';
   static const String firefox147 = 'firefox147';
-  static const String firefox = 'firefox147'; // Default Firefox alias
+
+  /// New in libcurl-impersonate v2.3.0. No dedicated HTTP/3 fingerprint.
+  static const String firefox153 = 'firefox153';
+  static const String firefox154 = 'firefox154';
+  static const String firefox155 = 'firefox155';
+  static const String firefox = 'firefox155'; // Default Firefox alias
 
   // Safari Desktop
   static const String safari153 = 'safari153';
@@ -188,14 +204,20 @@ class BrowserProfile {
   static const String safari184 = 'safari184';
   static const String safari260 = 'safari260';
   static const String safari2601 = 'safari2601';
-  static const String safari = 'safari2601'; // Default Safari alias
+
+  /// New in libcurl-impersonate v2.3.0.
+  static const String safari270 = 'safari270';
+  static const String safari = 'safari270'; // Default Safari alias
 
   // Safari iOS
   static const String safari172Ios = 'safari172_ios';
   static const String safari180Ios = 'safari180_ios';
   static const String safari184Ios = 'safari184_ios';
   static const String safari260Ios = 'safari260_ios';
-  static const String safariIos = 'safari260_ios'; // Default Safari iOS alias
+
+  /// New in libcurl-impersonate v2.3.0.
+  static const String safari270Ios = 'safari270_ios';
+  static const String safariIos = 'safari270_ios'; // Default Safari iOS alias
 
   // Tor Browser
   static const String tor145 = 'tor145';
@@ -206,10 +228,13 @@ class BrowserProfile {
     chrome99, chrome100, chrome101, chrome104, chrome107, chrome110,
     chrome116, chrome119, chrome120, chrome123, chrome124, chrome131,
     chrome133a, chrome136, chrome142, chrome145, chrome146, chrome150,
+    chrome151, chrome151Macos, chrome152, chrome152Macos,
     chrome99Android, chrome131Android,
-    firefox133, firefox135, firefox144, firefox147,
+    firefox133, firefox135, firefox144, firefox147, firefox153, firefox154,
+    firefox155,
     safari153, safari155, safari170, safari172Ios, safari180, safari180Ios,
-    safari184, safari184Ios, safari260, safari2601, safari260Ios,
+    safari184, safari184Ios, safari260, safari2601, safari260Ios, safari270,
+    safari270Ios,
     tor145,
   ];
 }

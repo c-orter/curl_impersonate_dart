@@ -1,6 +1,6 @@
 # Fingerprint tuning
 
-`curl_impersonate_dart` bundles **libcurl-impersonate v2.2.2**. A profile such as
+`curl_impersonate_dart` bundles **libcurl-impersonate v2.3.1**. A profile such as
 `BrowserProfile.chrome150` sets roughly forty TLS and HTTP/2 attributes in one
 call. Since v2.0.0 those attributes are individually addressable, so you can
 override just the ones you need.
@@ -260,8 +260,8 @@ you claim to be.
 
 ### 5. HTTP/3-only or QUIC-sensitive endpoints
 
-Only four profiles carry HTTP/3 fingerprints: `chrome145`, `chrome146`,
-`chrome150`, `firefox147` (see `BrowserProfile.supportsHttp3`).
+Only some profiles carry HTTP/3 fingerprints: `chrome145`, `chrome146`,
+`chrome150`, `chrome151`, `chrome152` (and `_macos` variants), `safari270`, `safari270_ios`, `firefox147` (see `BrowserProfile.supportsHttp3`).
 
 ```dart
 final client = CurlImpersonateClient(

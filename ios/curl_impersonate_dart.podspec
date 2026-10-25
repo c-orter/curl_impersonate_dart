@@ -10,10 +10,8 @@ Flutter iOS plugin wrapping libcurl-impersonate.
   s.author           = { 'Carter' => 'carter@example.com' }
 
   # Fetch the framework during pod install.
-  # NOTE: keep `v2.2.2` in sync with ext.curlImpersonateVersion in
-  # android/build.gradle. 2.2.2 rather than 2.2.3 because 2.2.3 links c-ares,
-  # whose Android name resolution cannot read net.dns* as an untrusted app.
-  # See the comment there before bumping.
+  # NOTE: keep the version in sync with ext.curlImpersonateVersion in
+  # android/build.gradle.
   #
   # The .curl-impersonate-version stamp is what makes this a versioned cache.
   # Existence of the extracted framework is not: CocoaPods reuses an existing
@@ -23,15 +21,15 @@ Flutter iOS plugin wrapping libcurl-impersonate.
   s.prepare_command  = <<-CMD
     set -e
     STAMP="libcurl-impersonate.xcframework/.curl-impersonate-version"
-    if [ ! -f "$STAMP" ] || [ "$(cat "$STAMP" 2>/dev/null)" != "v2.2.2" ]; then
-      echo "Downloading libcurl-impersonate.xcframework v2.2.2..."
+    if [ ! -f "$STAMP" ] || [ "$(cat "$STAMP" 2>/dev/null)" != "v2.3.1" ]; then
+      echo "Downloading libcurl-impersonate.xcframework v2.3.1..."
       rm -rf libcurl-impersonate.xcframework
-      curl -fL -o framework.tar.gz https://github.com/lexiforest/curl-impersonate/releases/download/v2.2.2/libcurl-impersonate-v2.2.2.ios-xcframework.tar.gz
+      curl -fL -o framework.tar.gz https://github.com/lexiforest/curl-impersonate/releases/download/v2.3.1/libcurl-impersonate-v2.3.1.ios-xcframework.tar.gz
       tar -xzf framework.tar.gz
       rm framework.tar.gz
-      echo "v2.2.2" > "$STAMP"
+      echo "v2.3.1" > "$STAMP"
     else
-      echo "libcurl-impersonate v2.2.2 already present, skipping download."
+      echo "libcurl-impersonate v2.3.1 already present, skipping download."
     fi
   CMD
 
