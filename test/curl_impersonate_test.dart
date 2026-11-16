@@ -87,7 +87,17 @@ void main() {
 
   group('LibCurl Core & Loader Tests', () {
     test('LibCurl version getter', () {
-      final isSupported = Platform.isAndroid || Platform.isIOS;
+      // On Android/iOS the library is always packaged, so a load failure is a
+      // real failure. On Linux it is only on the loader path inside a built app
+      // bundle (or with LD_LIBRARY_PATH pointing at its lib/ directory); a plain
+      // `flutter test` runs on the desktop fallback instead.
+      var isSupported = Platform.isAndroid || Platform.isIOS;
+      if (Platform.isLinux) {
+        try {
+          LibCurl.instance;
+          isSupported = true;
+        } catch (_) {}
+      }
       if (!isSupported) {
         print('Skipping native FFI test on unsupported platform: ${Platform.operatingSystem}');
         return;
@@ -268,8 +278,14 @@ void main() {
       expect(response.body, contains('headers'));
     });
 
+    // Browser profiles ask for HTTP/2, so over plaintext HTTP libcurl adds
+    // `Connection: Upgrade` + `Upgrade: h2c`. dart:io's HttpServer treats that as
+    // a protocol upgrade and never delivers the request body, so the body
+    // round-trip tests use an unimpersonated client against this local server.
     test('Perform POST request with body', () async {
-      final response = await client.request(
+      final plain = CurlImpersonateClient(defaultImpersonate: null);
+      addTearDown(plain.close);
+      final response = await plain.request(
         url: '$serverUrl/post',
         method: 'POST',
         body: 'hello world',
@@ -280,7 +296,9 @@ void main() {
     });
 
     test('Perform urlencoded POST request', () async {
-      final response = await client.request(
+      final plain = CurlImpersonateClient(defaultImpersonate: null);
+      addTearDown(plain.close);
+      final response = await plain.request(
         url: '$serverUrl/post',
         method: 'POST',
         bodyFields: {'name': 'test_user', 'value': '123'},

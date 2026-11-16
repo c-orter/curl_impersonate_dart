@@ -8,34 +8,37 @@ This library helps you bypass bot detection systems (such as Cloudflare, Akamai,
 
 * **Android:** Full Impersonation FFI (downloads and bundles `.so` binaries automatically). Requires API 21+.
 * **iOS:** Full Impersonation FFI (downloads and bundles `.xcframework` automatically via CocoaPods). Requires iOS 13+.
-* **Desktop Development Fallback:** Automatically falls back to standard HTTP clients (`package:http`) on macOS, Windows, and Linux to allow testing and development without app crashes.
+* **Linux (x86_64, aarch64):** Full Impersonation FFI (downloads and bundles the `.so` automatically during the CMake build). Requires glibc 2.17+.
+* **Desktop Development Fallback:** Automatically falls back to standard HTTP clients (`package:http`) on macOS and Windows to allow testing and development without app crashes. This also applies on Linux when the native library is not on the loader path (e.g. a plain `dart test`).
 
 ---
 
 ## Upstream
 
-This package bundles **libcurl-impersonate v2.3.1**, which is based on **curl 8.23.0**.
+This package bundles **libcurl-impersonate v2.3.2**, which is based on **curl 8.23.0**.
 
-v2.3.1 is a security release (Brotli 1.2.1, which fixes the "http2shell" bug, and
-revoked-certificate awareness on Windows); updating from earlier releases is
-strongly advised. Android is built with curl's threaded resolver again (as of
+v2.3.1 was a security release (Brotli 1.2.1, which fixes the "http2shell" bug, and
+revoked-certificate awareness on Windows); v2.3.2 adds zlib 1.3.2 and exposes
+BoringSSL crypto APIs. Updating from earlier releases is strongly advised.
+Android is built with curl's threaded resolver again (as of
 v2.3.0), so the DNS failure that kept this package on v2.2.2 is gone. Before
 bumping, still check for `ares_getaddrinfo` in the Android tarball — see the
 comment on `ext.curlImpersonateVersion` in `android/build.gradle`.
 
-The version is pinned in exactly two places, which must be kept in sync when upgrading:
+The version is pinned in exactly three places, which must be kept in sync when upgrading:
 
 * `android/build.gradle` → `ext.curlImpersonateVersion`
 * `ios/curl_impersonate_dart.podspec` → the `prepare_command` download URL
+* `linux/CMakeLists.txt` → `CURL_IMPERSONATE_VERSION`
 
 ### Upgrading
 
-1. Bump the version in both files above.
-2. Delete any previously downloaded binaries (the Gradle task keeps a
-   `.curl-impersonate-version` stamp per ABI and will re-download automatically,
-   but `android/build` and `ios/Pods` may hold stale artifacts):
+1. Bump the version in all three files above.
+2. Delete any previously downloaded binaries (the Gradle task and the Linux
+   CMake script keep a `.curl-impersonate-version` stamp and will re-download
+   automatically, but `android/build` and `ios/Pods` may hold stale artifacts):
    ```bash
-   rm -rf android/src/main/jniLibs android/build ios/Pods
+   rm -rf android/src/main/jniLibs android/build ios/Pods linux/.libcurl-impersonate
    ```
 
 ### Notable upstream changes since v1.5.6
@@ -94,6 +97,14 @@ cd ios
 pod install
 ```
 This automatically fetches the prebuilt static framework framework and compiles the necessary calling convention alignment shims.
+
+#### Linux
+No additional setup is required beyond the usual [Flutter Linux desktop toolchain](https://docs.flutter.dev/platform-integration/linux/install-linux/install-linux-on-linux). The CMake build downloads `libcurl-impersonate.so` for your architecture (x86_64 or aarch64) and installs it into the app bundle's `lib/` directory.
+
+To run `flutter test` against the native library instead of the fallback, point the loader at a built bundle (or at `linux/.libcurl-impersonate/<arch>` in this package after a first Linux build):
+```bash
+LD_LIBRARY_PATH=build/linux/x64/release/bundle/lib flutter test
+```
 
 ---
 
@@ -281,6 +292,6 @@ client.close();
 
 To maintain compatibility with various system architectures, the package wraps FFI in specific ways:
 
-1. **Android calling convention:** Direct register FFI call mappings.
+1. **Android / Linux calling convention:** Direct register FFI call mappings.
 2. **iOS calling convention:** iOS on Apple Silicon utilizes a custom ARM64 calling convention where variadic parameters (like `curl_easy_setopt`) are always passed on the stack instead of CPU registers. To accommodate this, the package uses a lightweight compiled C shim (`ios/Classes/shim.c`) that bridges standard register-based FFI arguments into stack-aligned arguments expected by iOS `libcurl`.
 3. **Cross-Platform fallback:** The `isNative` getter verifies if FFI bindings successfully loaded. Non-mobile systems will transparently run standard HTTP clients under the hood, ensuring developers can test their code on local systems before publishing to device simulators or staging environments.

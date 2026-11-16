@@ -95,6 +95,9 @@ local.properties
 # Version stamp for the downloaded libcurl-impersonate binaries
 **/android/**/.curl-impersonate-version
 
+# Downloaded libcurl-impersonate binaries (Linux)
+**/linux/.libcurl-impersonate/
+
 # iOS/XCode related
 **/ios/**/*.a
 **/ios/**/*.mode1v3

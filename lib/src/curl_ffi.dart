@@ -64,6 +64,10 @@ class LibCurl {
     if (Platform.isAndroid) {
       return ffi.DynamicLibrary.open('libcurl-impersonate.so');
     }
+    if (Platform.isLinux) {
+      // Bundled into <app>/lib by linux/CMakeLists.txt, which is on the runner's RPATH.
+      return ffi.DynamicLibrary.open('libcurl-impersonate.so');
+    }
     throw UnsupportedError('Unsupported platform: ${Platform.operatingSystem}');
   }
 
@@ -125,7 +129,7 @@ class LibCurl {
         'ios_curl_easy_setopt_ptr',
       );
     } else {
-      // Android: Call curl_easy_setopt directly
+      // Android / Linux: Call curl_easy_setopt directly
       _setoptInt = dyLib.lookupFunction<
           ffi.Int32 Function(ffi.Pointer<ffi.Void>, ffi.Int32, ffi.IntPtr),
           int Function(ffi.Pointer<ffi.Void>, int, int)>(

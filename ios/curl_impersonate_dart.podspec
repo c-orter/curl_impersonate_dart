@@ -11,7 +11,7 @@ Flutter iOS plugin wrapping libcurl-impersonate.
 
   # Fetch the framework during pod install.
   # NOTE: keep the version in sync with ext.curlImpersonateVersion in
-  # android/build.gradle.
+  # android/build.gradle and CURL_IMPERSONATE_VERSION in linux/CMakeLists.txt.
   #
   # The .curl-impersonate-version stamp is what makes this a versioned cache.
   # Existence of the extracted framework is not: CocoaPods reuses an existing

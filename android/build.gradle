@@ -37,7 +37,8 @@ android {
 }
 
 // Upstream libcurl-impersonate release to bind against.
-// Must be kept in sync with the version pinned in ios/curl_impersonate_dart.podspec.
+// Must be kept in sync with the version pinned in ios/curl_impersonate_dart.podspec
+// and linux/CMakeLists.txt.
 //
 // v2.2.3 linked c-ares, which cannot find nameservers on Android (no
 // /etc/resolv.conf, net.dns* properties unreadable by untrusted apps), so every
@@ -45,7 +46,7 @@ android {
 // back to the threaded resolver on Android. Before bumping, check the tarball:
 //   tar xzf libcurl-impersonate-<v>.<arch>-linux-android.tar.gz \
 //     && strings libcurl-impersonate.so | grep -c ares_getaddrinfo   # want 0
-ext.curlImpersonateVersion = "2.3.1"
+ext.curlImpersonateVersion = "2.3.2"
 
 // Download and unpack precompiled libcurl-impersonate binaries
 task downloadBinaries {
