@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = 'curl_impersonate_dart'
-  s.version          = '0.2.0'
+  s.version          = '0.2.1'
   s.summary          = 'Flutter iOS plugin for libcurl-impersonate'
   s.description      = <<-DESC
 Flutter iOS plugin wrapping libcurl-impersonate.
@@ -21,15 +21,15 @@ Flutter iOS plugin wrapping libcurl-impersonate.
   s.prepare_command  = <<-CMD
     set -e
     STAMP="libcurl-impersonate.xcframework/.curl-impersonate-version"
-    if [ ! -f "$STAMP" ] || [ "$(cat "$STAMP" 2>/dev/null)" != "v2.3.1" ]; then
-      echo "Downloading libcurl-impersonate.xcframework v2.3.1..."
+    if [ ! -f "$STAMP" ] || [ "$(cat "$STAMP" 2>/dev/null)" != "v2.3.2" ]; then
+      echo "Downloading libcurl-impersonate.xcframework v2.3.2..."
       rm -rf libcurl-impersonate.xcframework
-      curl -fL -o framework.tar.gz https://github.com/lexiforest/curl-impersonate/releases/download/v2.3.1/libcurl-impersonate-v2.3.1.ios-xcframework.tar.gz
+      curl -fL -o framework.tar.gz https://github.com/lexiforest/curl-impersonate/releases/download/v2.3.2/libcurl-impersonate-v2.3.2.ios-xcframework.tar.gz
       tar -xzf framework.tar.gz
       rm framework.tar.gz
-      echo "v2.3.1" > "$STAMP"
+      echo "v2.3.2" > "$STAMP"
     else
-      echo "libcurl-impersonate v2.3.1 already present, skipping download."
+      echo "libcurl-impersonate v2.3.2 already present, skipping download."
     fi
   CMD
 
