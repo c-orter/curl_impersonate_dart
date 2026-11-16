@@ -59,6 +59,11 @@ void main() {
         response.statusCode = 302;
         response.headers.add('set-cookie', 'token=$token; Path=/; HttpOnly');
         response.headers.set('location', '/cookies');
+      } else if (request.uri.path == '/cookies/multi') {
+        // `add`, not `set`: `set` would replace earlier values.
+        response.headers.add('set-cookie', 'alpha=1; Path=/');
+        response.headers.add('set-cookie', 'bravo=2; Path=/');
+        response.headers.add('set-cookie', 'charlie=3; Path=/');
       } else if (request.uri.path == '/cookies') {
         final cookieHeader = request.headers.value('cookie') ?? '';
         final cookies = <String, String>{};
@@ -306,6 +311,18 @@ void main() {
       expect(response.statusCode, equals(200));
       expect(response.json['form']['name'], equals('test_user'));
       expect(response.json['form']['value'], equals('123'));
+    });
+
+    test('Repeated Set-Cookie headers are all exposed on the response', () async {
+      final response = await client.request(url: '$serverUrl/cookies/multi', method: 'GET');
+      if (!client.isNative) {
+        markTestSkipped('Native library not loaded; run with LD_LIBRARY_PATH set.');
+        return;
+      }
+      final setCookie = response.headers['set-cookie'] ?? '';
+      expect(setCookie, contains('alpha=1'));
+      expect(setCookie, contains('bravo=2'));
+      expect(setCookie, contains('charlie=3'));
     });
 
     test('Cookie persistence across requests', () async {

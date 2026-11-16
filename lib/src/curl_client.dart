@@ -205,7 +205,10 @@ _CurlResponseResult _executeRequestInIsolate(_CurlRequestPayload payload) {
     if (colonIdx != -1) {
       final key = line.substring(0, colonIdx).trim().toLowerCase();
       final val = line.substring(colonIdx + 1).trim();
-      responseHeaders[key] = val;
+      // Repeated Set-Cookie headers are joined with ', ' (as package:http's
+      // IOClient does) instead of the last one overwriting the rest.
+      final existing = responseHeaders[key];
+      responseHeaders[key] = key == 'set-cookie' && existing != null ? '$existing, $val' : val;
     }
     return len;
   }
